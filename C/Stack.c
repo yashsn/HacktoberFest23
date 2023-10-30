@@ -1,5 +1,5 @@
 #include <stdio.h>
-int stack[80];
+int stack[90];
 int top = -1,dig;
 void push(int x)
 {
@@ -11,17 +11,17 @@ else
 {
 top++;
 stack[top] = x;
-printf("%d Pushed To The Stack\n", x);
+printf("%d Pushed To Stack\n", x);
 }
 }
 void pop(){
 if(top == -1)
 {
-printf("Underflow\n");
+printf("Case of Underflow\n");
 }
 else
 {
-printf("%d Popped From The Stack\n", stack[top]);
+printf("%d Popped From Stack\n", stack[top]);
 top--;
 }
 }
@@ -59,7 +59,7 @@ printf("Enter The Number Of Element Of The Stack: ");
 scanf("%d",&dig);
 do
 {
-printf("Enter The Operation To Perform:\n");
+printf("Select The Operation To Perform:\n");
 printf("1. Push\n2. Pop\n3. Top element\n4. Display The Stack\n5.
 Exit\n");
 scanf("%d", &choice);
