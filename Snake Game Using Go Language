@@ -1,0 +1,199 @@
+package main
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+
+	termbox "github.com/nsf/termbox-go"
+)
+
+// Constants
+const (
+	width  = 20
+	height = 15
+)
+
+// Point represents a 2D coordinate.
+type Point struct {
+	x, y int
+}
+
+// Direction represents the current direction of the snake.
+type Direction int
+
+const (
+	Up Direction = iota
+	Down
+	Left
+	Right
+)
+
+// Snake represents the snake in the game.
+type Snake struct {
+	Body      []Point
+	Direction Direction
+}
+
+var (
+	food     Point
+	score    int
+	gameOver bool
+)
+
+func main() {
+	err := termbox.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer termbox.Close()
+
+	// Initialize game variables
+	snake := Snake{
+		Body: []Point{{2, 2}},
+	}
+	food = generateFood(snake)
+	score = 0
+	gameOver = false
+
+	// Set up the game loop
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	// Start listening for keyboard events in a separate goroutine
+	go func() {
+		for {
+			ev := termbox.PollEvent()
+			if ev.Type == termbox.EventKey {
+				switch ev.Key {
+				case termbox.KeyArrowUp:
+					if snake.Direction != Down {
+						snake.Direction = Up
+					}
+				case termbox.KeyArrowDown:
+					if snake.Direction != Up {
+						snake.Direction = Down
+					}
+				case termbox.KeyArrowLeft:
+					if snake.Direction != Right {
+						snake.Direction = Left
+					}
+				case termbox.KeyArrowRight:
+					if snake.Direction != Left {
+						snake.Direction = Right
+					}
+				case termbox.KeyEsc:
+					gameOver = true
+				}
+			}
+		}
+	}()
+
+	// Main game loop
+	for !gameOver {
+		select {
+		case <-ticker.C:
+			if !gameOver {
+				termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+				updateGame(&snake)
+				drawGame(&snake)
+				termbox.Flush()
+			}
+		}
+	}
+
+	// Display game over message
+	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
+	printMessage("Game Over! Your Score: "+fmt.Sprint(score), width/2, height/2)
+	termbox.Flush()
+
+	// Wait for a key press to exit
+	for {
+		ev := termbox.PollEvent()
+		if ev.Type == termbox.EventKey {
+			break
+		}
+	}
+}
+
+func generateFood(snake Snake) Point {
+	rand.Seed(time.Now().UnixNano())
+	var food Point
+	for {
+		food = Point{rand.Intn(width), rand.Intn(height)}
+		collided := false
+		for _, segment := range snake.Body {
+			if food == segment {
+				collided = true
+				break
+			}
+		}
+		if !collided {
+			break
+		}
+	}
+	return food
+}
+
+func updateGame(snake *Snake) {
+	// Move the snake
+	head := snake.Body[0]
+	var newHead Point
+
+	switch snake.Direction {
+	case Up:
+		newHead = Point{head.x, head.y - 1}
+	case Down:
+		newHead = Point{head.x, head.y + 1}
+	case Left:
+		newHead = Point{head.x - 1, head.y}
+	case Right:
+		newHead = Point{head.x + 1, head.y}
+	}
+
+	// Check for collision with food
+	if newHead == food {
+		snake.Body = append([]Point{newHead}, snake.Body...)
+		food = generateFood(*snake)
+		score++
+	} else {
+		// Move snake
+		snake.Body = append([]Point{newHead}, snake.Body[:len(snake.Body)-1]...)
+	}
+
+	// Check for collision with walls or itself
+	if newHead.x < 0 || newHead.x >= width || newHead.y < 0 || newHead.y >= height {
+		gameOver = true
+	} else {
+		for _, segment := range snake.Body[1:] {
+			if newHead == segment {
+				gameOver = true
+				break
+			}
+		}
+	}
+}
+
+func drawGame(snake *Snake) {
+	// Draw food
+	termbox.SetCell(food.x, food.y, 'F', termbox.ColorRed, termbox.ColorDefault)
+
+	// Draw snake
+	for i, segment := range snake.Body {
+		if i == 0 {
+			termbox.SetCell(segment.x, segment.y, 'O', termbox.ColorGreen, termbox.ColorDefault)
+		} else {
+			termbox.SetCell(segment.x, segment.y, 'o', termbox.ColorGreen, termbox.ColorDefault)
+		}
+	}
+
+	// Display score
+	printMessage("Score: "+fmt.Sprint(score), 0, height)
+}
+
+func printMessage(message string, x, y int) {
+	for i, ch := range message {
+		termbox.SetCell(x+i, y, ch, termbox.ColorWhite, termbox.ColorDefault)
+	}
+}
+
