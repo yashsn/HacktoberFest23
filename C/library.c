@@ -104,6 +104,9 @@ void searchBook(struct Book books[], int count) {
         }
     }
     if (!found) {
+
         printf("Book not found!!\n");
+
+
     }
 }
